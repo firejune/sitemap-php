@@ -5,11 +5,11 @@
  *
  * This class used for generating Google Sitemap files
  *
- * @package    Sitemap
- * @author     Osman Üngür <osmanungur@gmail.com>
- * @copyright  2009-2015 Osman Üngür
- * @license    http://opensource.org/licenses/MIT MIT License
- * @link       http://github.com/o/sitemap-php
+ * @package		Sitemap
+ * @author		 Osman Üngür <osmanungur@gmail.com>
+ * @copyright	2009-2015 Osman Üngür
+ * @license		http://opensource.org/licenses/MIT MIT License
+ * @link			 http://github.com/o/sitemap-php
  */
 class Sitemap {
 
@@ -19,6 +19,7 @@ class Sitemap {
 	 */
 	private $writer;
 	private $domain;
+	private $alternate;
 	private $path;
 	private $filename = 'sitemap';
 	private $current_item = 0;
@@ -26,6 +27,7 @@ class Sitemap {
 
 	const EXT = '.xml';
 	const SCHEMA = 'http://www.sitemaps.org/schemas/sitemap/0.9';
+	const XHTML = 'http://www.w3.org/1999/xhtml';
 	const DEFAULT_PRIORITY = 0.5;
 	const ITEM_PER_SITEMAP = 50000;
 	const SEPERATOR = '-';
@@ -59,6 +61,25 @@ class Sitemap {
 	}
 
 	/**
+	 * Sets alternate path of the website, starting with http:// or https://
+	 *
+	 * @param string $alternate
+	 */
+	public function setAlternate($alternate) {
+		$this->alternate = $alternate;
+		return $this;
+	}
+
+	/**
+	 * Returns alternate path of the website
+	 *
+	 * @return string
+	 */
+	private function getAlternate() {
+		return $this->alternate;
+	}
+
+	/**
 	 * Returns XMLWriter object instance
 	 *
 	 * @return XMLWriter
@@ -70,7 +91,7 @@ class Sitemap {
 	/**
 	 * Assigns XMLWriter object instance
 	 *
-	 * @param XMLWriter $writer 
+	 * @param XMLWriter $writer
 	 */
 	private function setWriter(XMLWriter $writer) {
 		$this->writer = $writer;
@@ -78,7 +99,7 @@ class Sitemap {
 
 	/**
 	 * Returns path of sitemaps
-	 * 
+	 *
 	 * @return string
 	 */
 	private function getPath() {
@@ -87,7 +108,7 @@ class Sitemap {
 
 	/**
 	 * Sets paths of sitemaps
-	 * 
+	 *
 	 * @param string $path
 	 * @return Sitemap
 	 */
@@ -98,7 +119,7 @@ class Sitemap {
 
 	/**
 	 * Returns filename of sitemap file
-	 * 
+	 *
 	 * @return string
 	 */
 	private function getFilename() {
@@ -107,7 +128,7 @@ class Sitemap {
 
 	/**
 	 * Sets filename of sitemap file
-	 * 
+	 *
 	 * @param string $filename
 	 * @return Sitemap
 	 */
@@ -127,7 +148,7 @@ class Sitemap {
 
 	/**
 	 * Increases item counter
-	 * 
+	 *
 	 */
 	private function incCurrentItem() {
 		$this->current_item = $this->current_item + 1;
@@ -144,7 +165,7 @@ class Sitemap {
 
 	/**
 	 * Increases sitemap file count
-	 * 
+	 *
 	 */
 	private function incCurrentSitemap() {
 		$this->current_sitemap = $this->current_sitemap + 1;
@@ -152,7 +173,7 @@ class Sitemap {
 
 	/**
 	 * Prepares sitemap XML document
-	 * 
+	 *
 	 */
 	private function startSitemap() {
 		$this->setWriter(new XMLWriter());
@@ -165,12 +186,13 @@ class Sitemap {
 		$this->getWriter()->setIndent(true);
 		$this->getWriter()->startElement('urlset');
 		$this->getWriter()->writeAttribute('xmlns', self::SCHEMA);
+		$this->getWriter()->writeAttribute('xmlns:xhtml', self::XHTML);
 	}
 
 	/**
 	 * Adds an item to sitemap
 	 *
-	 * @param string $loc URL of the page. This value must be less than 2,048 characters. 
+	 * @param string $loc URL of the page. This value must be less than 2,048 characters.
 	 * @param string $priority The priority of this URL relative to other URLs on your site. Valid values range from 0.0 to 1.0.
 	 * @param string $changefreq How frequently the page is likely to change. Valid values are always, hourly, daily, weekly, monthly, yearly and never.
 	 * @param string|int $lastmod The date of last modification of url. Unix timestamp or any English textual datetime description.
@@ -184,14 +206,27 @@ class Sitemap {
 			$this->startSitemap();
 			$this->incCurrentSitemap();
 		}
+
 		$this->incCurrentItem();
 		$this->getWriter()->startElement('url');
 		$this->getWriter()->writeElement('loc', $this->getDomain() . $loc);
+
+		if ($this->getAlternate()) {
+			$this->getWriter()->startElement('xhtml:link');
+			$this->getWriter()->writeAttribute('href', $this->getAlternate() . $loc);
+			$this->getWriter()->writeAttribute('rel', 'alternate');
+			$this->getWriter()->writeAttribute('media', 'only screen and (max-width: 640px)');
+			$this->getWriter()->endElement();
+		}
+
 		$this->getWriter()->writeElement('priority', $priority);
+
 		if ($changefreq)
 			$this->getWriter()->writeElement('changefreq', $changefreq);
+
 		if ($lastmod)
 			$this->getWriter()->writeElement('lastmod', $this->getLastModifiedDate($lastmod));
+
 		$this->getWriter()->endElement();
 		return $this;
 	}
@@ -215,7 +250,7 @@ class Sitemap {
 	 * Finalizes tags of sitemap XML document.
 	 *
 	 */
-	private function endSitemap() {
+	public function endSitemap() {
 		if (!$this->getWriter()) {
 			$this->startSitemap();
 		}
